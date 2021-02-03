@@ -35,6 +35,9 @@ program
   .option('--https', 'add https support')
   .option('--test', 'add SuperTest')
   .option('-f, --force', 'force on non-empty directory')
+  .option('-a, --add <generator>', 'surprise')
+  .option('--noErrors', '', false)
+  .option('--withLog')
   .parse(process.argv)
 
 module.exports = program

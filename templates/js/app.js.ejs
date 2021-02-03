@@ -1,39 +1,86 @@
 
 
-const app = module.exports = require('express')()
+const express =  require('express');
+const app = express()
   .set('port', process.env.PORT || 5555)
   .get('/', (req, res) => (res.end('Sample')))
   .get('/json', (req, res) => res.json({ ok: 'ok' }))
-  .get('/headers', (req, res) => JSON.stringify(res.getHeaders(), null, 2))
+  .get('/headers', (req, res) => JSON.stringify(res.getHeaders(), null, 2));
 
 
-if (require.main === module) {
-<%if(args.https){%>
-   // sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./selfsigned.key -out selfsigned.crt
-  const fs = require('fs');
-  const { join } = require('path');
-  const key = fs.readFileSync(join(__dirname, '.cert/selfsigned.key'), 'utf8');
-  const cert = fs.readFileSync(join(__dirname, '.cert/selfsigned.crt'), 'utf8');
-  const serv = require('https').createServer({ key, cert }, app);
-<%}else{%>
-  const serv = require('http').createServer(app);
+//middle
+app.use(require('morgan')('dev'))
+.use(express.json())
+.use(express.urlencoded({ extended: false }))
+.use(require('cookieParser')({secret: 'SECRET'})) //  curl http://127.0.0.1:8080 --cookie "Cho=Kim;Greet=Hello"
+.use(express.static(path.join(__dirname, 'public')));
+
+
+<%if (args.withLog) {%>
+const winston = require('winston');
+const log = require('util').debuglog('jnad');
+const logger = winston.createLogger({
+    level: 'info',
+    transports: [
+        new winston.transports.File({ filename: join(__dirname, 'log.err'), level: 'eror' }),
+        new winston.transports.Console({ level: 'info' })
+    ]
+})
 <%}%>
-  serv.listen(app.get('port'),
-      () => console.log(`listen http://localhost:${JSON.stringify(serv.address().port)}`)
-  );
-}
 
-<%if(args.test){%>
+<%if (!args.noErrors) {%>
+//errors
+const createError = require('http-errors');
+app
+  .get('/rejected', (req, res, next) => {
+    require('fs').readdir('not-exist', (err, files) => {
+      if (err.code === 'ENOENT') {
+        return next(createError(404, err, { expose: false }))
+      }
+      if (err) return next(err);
+    });
+    require('util').promisify(require('fs').readdir)('not-exist').then().catch(next)
+  })
+  .get('/forbidden', (req, res, next) => {
+    return next(createError(403, `${req.ip} tried to access /Forbidden`));
+  })
+  .use((req, res, next) => {
+    return next(createError(404));
+  })
+  .use((err, req, res, next) => {
+    console.error(err.stack)
+    res.sendStatus(err.status || 500)
+  });
+<%}%>
+
+
+<%if (args.https) {%>
+ // sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./selfsigned.key -out selfsigned.crt
+const fs = require('fs');
+const { join } = require('path');
+const key = fs.readFileSync(join(__dirname, '.cert/selfsigned.key'), 'utf8');
+const cert = fs.readFileSync(join(__dirname, '.cert/selfsigned.crt'), 'utf8');
+const serv = require('https').createServer({ key, cert }, app);
+<%} else {%>
+const serv = require('http').createServer(app);
+<%}%>
+serv.listen(app.get('port'),
+  () => console.log(`listen http://localhost:${JSON.stringify(serv.address().port)}`)
+);
+
+<%if (args.test) {%>
 // npx jest --watch -c jest.config.js  --rootDir . -- app.js  
 // npm i -D jest supertest
 if (process.env.JEST_WORKER_ID !== undefined) {
     const request = require('supertest')(app)
     describe('test', () => {
-        it('GET / - saluts you', (done) => {
-            request
-                .get('/')
-                .expect(/Hi/, done);
-        });
+      it('GET / - saluts you', (done) => {
+        request
+          .get('/')
+          .expect(/Hi/, done);
+      });
     });
-}
+  }
 <%}%>
+
+module.exports = app;

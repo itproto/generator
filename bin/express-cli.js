@@ -18,12 +18,23 @@ const {
 } = require('./utils')
 
 const { createPackage, addDependency } = require('./package-tmpl')
-
+const getWorkingDir = () => path.resolve(args.args.shift() || '.')
 // Re-assign process.exit because of commander
 process.exit = exit
 
 if (!exit.exited) {
   main()
+}
+
+if (args.add === 'json') {
+  const dir = getWorkingDir()
+  const name = 'users'
+  const controller = loadTemplate('js/mvc/controller.js')
+  const model = loadTemplate('js/mvc/controller.js')
+  controller.locals.name = name
+  write(path.join(dir, `${name}-route.js`), controller.render())
+  write(path.join(dir, `${name}-model.js`), model.render())
+  process.exit(0)
 }
 
 function createApplication(name, dir) {
@@ -82,8 +93,8 @@ function createApplication(name, dir) {
 }
 
 function main() {
-  const destinationPath = args.args.shift() || '.'
-  const appName = createAppName(path.resolve(destinationPath)) || 'hello-world'
+  const destinationPath = getWorkingDir()
+  const appName = createAppName(destinationPath) || 'hello-world'
   args.view = args.view === true ? 'ejs' : undefined
 
   emptyDirectory(destinationPath, (empty) => {

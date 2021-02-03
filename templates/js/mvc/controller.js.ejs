@@ -1,0 +1,65 @@
+const users = require('./model')
+const { query, param, validationResult, checkSchema, check } = require('express-validator')
+
+const controller = {
+  gets: [query('from').optional(true).isNumeric(),
+    (req, res) => {
+      const errors = validationResult(req)
+      if (!errors.isEmpty()) {
+        return res.status(400).send(errors)
+      }
+      const { from, to } = req.query
+      res.json(users.list(from, to))
+    }
+  ],
+  got: [param('id').isAlphanumeric().withMessage('Alphanumeric')
+    .trim().isLength({ max: 11, min: 11 }).withMessage('Must be 10'), (req, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).send(errors)
+    }
+    const { id } = req.params
+    const user = users.get(req.params.id)
+    if (!user) {
+      return res.status(400).send(`User ${id} not found`)
+    }
+    res.json(user)
+  }],
+
+  post: [checkSchema({
+    name: {
+      isLength: {
+        errorMessage: 'Must be ok',
+        options: { min: 3 }
+      }
+    }
+
+  }),
+  (req, res) => {
+    const errors = validationResult(req)
+    if (!errors.isEmpty()) {
+      return res.status(400).send(errors)
+    }
+    res.json(users.create(req.body))
+  }
+  ],
+
+  put: [(req, res) => {
+    const { id } = req.params
+    res.json(users.update(id, req.body))
+  }
+  ],
+
+  del: [(req, res) => {
+    const { id } = req.params
+    res.json(users.del(id))
+  }
+  ]
+}
+
+module.exports = require('express').Router()
+  .get('/', controller.gets)
+  .post('/', controller.post)
+  .get('/:id', controller.got)
+  .put('/:id', controller.put)
+  .delete('/:id', controller.del)

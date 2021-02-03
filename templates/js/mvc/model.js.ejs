@@ -1,0 +1,50 @@
+
+const uuid = () => Math.random().toString(32).replace('.', '')
+const createUser = (idx) => new Promise((resolve) => {
+  const name = `User#${idx}`
+  resolve({
+    name,
+    id: uuid(),
+    age: 10 + Math.floor(Math.random()) * 100 - 10
+  })
+})
+
+let users = []
+Promise.all(Array(100).fill(1).map((_, idx) => createUser(idx))).then(res => {
+  users = [
+    ...users,
+    ...res
+  ]
+}).catch(console.error)
+// || require('./users.json');
+
+module.exports = {
+  get: (id) => {
+    const res = users.find(u => u.id === id)
+    console.log(res)
+    return res
+  },
+  list: (from = 0, to = users.length) => {
+    return users.slice(from, to)
+  },
+  remove: (id) => users.splice(users.indexOf(this.get(id)), 1),
+  create: (user) => {
+    const newUser = {
+      ...user,
+      id: uuid()
+    }
+    users.push(newUser)
+    return newUser
+  },
+  update: (userId, update) => {
+    const index = users.findIndex(u => u.id === userId)
+    if (index !== -1) {
+      users[index] = {
+        ...users[index],
+        ...update
+      }
+      return users[index]
+    }
+    return undefined
+  }
+}
