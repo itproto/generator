@@ -13,13 +13,15 @@ const {
   exit,
   copyTemplate,
   write,
-  warning,
+
   copyTemplateMulti,
   confirm,
   mkdir,
   createAppName,
   emptyDirectory
 } = require('./utils')
+
+const { createPackage, addDependency } = require('./package-tmpl')
 
 // Re-assign process.exit because of commander
 process.exit = exit
@@ -28,25 +30,19 @@ if (!exit.exited) {
   main()
 }
 
-/**
- * Create application at the given directory.
- *
- * @param {string} name
- * @param {string} dir
- */
+const getFuncBody = method => method.toString().replace(/^\W*(function[^{]+\{([\s\S]*)\}|[^=]+=>[^{]*\{([\s\S]*)\}|[^=]+=>(.+))/i, '$2$3$4')
 
 function createApplication(name, dir) {
-  console.log()
-
   // Package
-  const pkg = require('./package-tmpl')(name)
+  const pkg = createPackage(name)
 
   // JavaScript
   const app = loadTemplate('js/app.js')
-  const www = loadTemplate('js/www')
-
-  // App name
-  www.locals.name = name
+  const addUse = (cb) => {
+    let body = cb.toString()
+    body = body.slice(body.indexOf('=>') + 2)
+    app.locals.uses.push(body)
+  }
 
   // App modules
   app.locals.localModules = Object.create(null)
@@ -56,8 +52,8 @@ function createApplication(name, dir) {
 
   // Request logger
   app.locals.modules.logger = 'morgan'
-  app.locals.uses.push("logger('dev')")
-  pkg.dependencies.morgan = '~1.9.1'
+  addUse((logger) => logger('dev'))
+  addDependency(pkg, 'morgan', '~1.9.1')
 
   // Body parsers
   app.locals.uses.push('express.json()')
@@ -66,38 +62,13 @@ function createApplication(name, dir) {
   // Cookie parser
   app.locals.modules.cookieParser = 'cookie-parser'
   app.locals.uses.push('cookieParser()')
-  pkg.dependencies['cookie-parser'] = '~1.4.4'
+  addDependency(pkg, 'cookie-parser', '~1.4.4')
 
   if (dir !== '.') {
     mkdir(dir, '.')
   }
 
-  mkdir(dir, 'public')
-  mkdir(dir, 'public/javascripts')
-  mkdir(dir, 'public/images')
-  mkdir(dir, 'public/stylesheets')
-
-  // copy css templates
-  switch (program.css) {
-    case 'less':
-      copyTemplateMulti('css', dir + '/public/stylesheets', '*.less')
-      break
-    case 'stylus':
-      copyTemplateMulti('css', dir + '/public/stylesheets', '*.styl')
-      break
-    case 'compass':
-      copyTemplateMulti('css', dir + '/public/stylesheets', '*.scss')
-      break
-    case 'sass':
-      copyTemplateMulti('css', dir + '/public/stylesheets', '*.sass')
-      break
-    default:
-      copyTemplateMulti('css', dir + '/public/stylesheets', '*.css')
-      break
-  }
-
-  // copy route templates
-  mkdir(dir, 'routes')
+  ['public', 'routes'].forEach(p => mkdir(dir, p))
   copyTemplateMulti('js/routes', dir + '/routes', '*.js')
 
   if (program.view) {
@@ -105,58 +76,13 @@ function createApplication(name, dir) {
     mkdir(dir, 'views')
     pkg.dependencies['http-errors'] = '~1.6.3'
     switch (program.view) {
-      case 'dust':
-        copyTemplateMulti('views', dir + '/views', '*.dust')
-        break
       case 'ejs':
         copyTemplateMulti('views', dir + '/views', '*.ejs')
-        break
-      case 'hbs':
-        copyTemplateMulti('views', dir + '/views', '*.hbs')
-        break
-      case 'hjs':
-        copyTemplateMulti('views', dir + '/views', '*.hjs')
-        break
-      case 'jade':
-        copyTemplateMulti('views', dir + '/views', '*.jade')
-        break
-      case 'pug':
-        copyTemplateMulti('views', dir + '/views', '*.pug')
-        break
-      case 'twig':
-        copyTemplateMulti('views', dir + '/views', '*.twig')
-        break
-      case 'vash':
-        copyTemplateMulti('views', dir + '/views', '*.vash')
         break
     }
   } else {
     // Copy extra public files
     copyTemplate('js/index.html', path.join(dir, 'public/index.html'))
-  }
-
-  // CSS Engine support
-  switch (program.css) {
-    case 'compass':
-      app.locals.modules.compass = 'node-compass'
-      app.locals.uses.push("compass({ mode: 'expanded' })")
-      pkg.dependencies['node-compass'] = '0.2.3'
-      break
-    case 'less':
-      app.locals.modules.lessMiddleware = 'less-middleware'
-      app.locals.uses.push("lessMiddleware(path.join(__dirname, 'public'))")
-      pkg.dependencies['less-middleware'] = '~2.2.1'
-      break
-    case 'sass':
-      app.locals.modules.sassMiddleware = 'node-sass-middleware'
-      app.locals.uses.push("sassMiddleware({\n  src: path.join(__dirname, 'public'),\n  dest: path.join(__dirname, 'public'),\n  indentedSyntax: true, // true = .sass and false = .scss\n  sourceMap: true\n})")
-      pkg.dependencies['node-sass-middleware'] = '0.11.0'
-      break
-    case 'stylus':
-      app.locals.modules.stylus = 'stylus'
-      app.locals.uses.push("stylus.middleware(path.join(__dirname, 'public'))")
-      pkg.dependencies['stylus'] = '0.54.5'
-      break
   }
 
   // Index router mount
@@ -169,41 +95,9 @@ function createApplication(name, dir) {
 
   // Template support
   switch (program.view) {
-    case 'dust':
-      app.locals.modules.adaro = 'adaro'
-      app.locals.view = {
-        engine: 'dust',
-        render: 'adaro.dust()'
-      }
-      pkg.dependencies.adaro = '~1.0.4'
-      break
     case 'ejs':
       app.locals.view = { engine: 'ejs' }
-      pkg.dependencies.ejs = '~2.6.1'
-      break
-    case 'hbs':
-      app.locals.view = { engine: 'hbs' }
-      pkg.dependencies.hbs = '~4.0.4'
-      break
-    case 'hjs':
-      app.locals.view = { engine: 'hjs' }
-      pkg.dependencies.hjs = '~0.0.6'
-      break
-    case 'jade':
-      app.locals.view = { engine: 'jade' }
-      pkg.dependencies.jade = '~1.11.0'
-      break
-    case 'pug':
-      app.locals.view = { engine: 'pug' }
-      pkg.dependencies.pug = '2.0.0-beta11'
-      break
-    case 'twig':
-      app.locals.view = { engine: 'twig' }
-      pkg.dependencies.twig = '~0.10.3'
-      break
-    case 'vash':
-      app.locals.view = { engine: 'vash' }
-      pkg.dependencies.vash = '~0.12.6'
+      addDependency(pkg, 'ejs', '~2.6.1')
       break
     default:
       app.locals.view = false
@@ -223,8 +117,6 @@ function createApplication(name, dir) {
   // write files
   write(path.join(dir, 'app.js'), app.render())
   write(path.join(dir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n')
-  mkdir(dir, 'bin')
-  write(path.join(dir, 'bin/www'), www.render(), MODE_0755)
 
   const prompt = launchedFromCmd() ? '>' : '$'
 
@@ -264,8 +156,8 @@ function loadTemplate(name) {
   }
 
   return {
-    locals: locals,
-    render: render
+    locals,
+    render
   }
 }
 
@@ -282,14 +174,7 @@ function main() {
 
   // View engine
   if (program.view === true) {
-    if (program.ejs) program.view = 'ejs'
-  }
-
-  // Default view engine
-  if (program.view === true) {
-    warning('the default view engine will not be jade in future releases\n' +
-      "use `--view=jade' or `--help' for additional options")
-    program.view = 'jade'
+    program.view = 'ejs'
   }
 
   // Generate application

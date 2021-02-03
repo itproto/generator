@@ -1,4 +1,4 @@
-module.exports = (name) => ({
+const createPackage = (name) => ({
   name,
   version: '0.0.0',
   private: true,
@@ -15,3 +15,13 @@ module.exports = (name) => ({
     'nodemon': '^2.0.7'
   }
 })
+
+const addDependency = (pkg, name, version) => {
+  pkg.dependencies[name] = version
+  return pkg
+}
+
+module.exports = {
+  createPackage,
+  addDependency
+}
