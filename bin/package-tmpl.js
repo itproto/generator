@@ -1,11 +1,14 @@
-const createPackage = (name) => ({
+
+const createPackage = (name, port = '8080', mainFile = 'app.js') => ({
   name,
   version: '0.0.0',
   private: true,
   scripts: {
-    start: 'SET PORT=7777 && nodemon app.js',
-    'start:nix': 'SET PORT=7777 && nodemon app.js',
-    debug: 'node --inspect --debug-brk app.js'
+    '_start': `PORT=${port} node ${mainFile}`,
+    'start': `PORT=${port} nodemon ${mainFile}`,
+    'watch:win': `SET PORT=${port} & nodemon ${mainFile}`,
+    'watch:nix': `PORT=${port} nodemon ${mainFile}`,
+    debug: `node --inspect --debug-brk ${mainFile}`
 
   },
   dependencies: {

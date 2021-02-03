@@ -96,7 +96,7 @@ function main() {
           process.stdin.destroy()
           newApp()
         } else {
-          console.error('aborting')
+          console.error('ABORTING')
           exit(1)
         }
       })
