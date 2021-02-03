@@ -1,51 +1,39 @@
-<% if (view) { -%>
-var createError = require('http-errors');
-<% } -%>
-var express = require('express');
-var path = require('path');
-<% Object.keys(modules).sort().forEach(function (variable) { -%>
-var <%- variable %> = require('<%- modules[variable] %>');
-<% }); -%>
 
-<% Object.keys(localModules).sort().forEach(function (variable) { -%>
-var <%- variable %> = require('<%- localModules[variable] %>');
-<% }); -%>
 
-var app = express();
+const app = module.exports = require('express')()
+  .set('port', process.env.PORT || 5555)
+  .get('/', (req, res) => (res.end('Sample')))
+  .get('/json', (req, res) => res.json({ ok: 'ok' }))
+  .get('/headers', (req, res) => JSON.stringify(res.getHeaders(), null, 2))
 
-<% if (view) { -%>
-// view engine setup
-<% if (view.render) { -%>
-app.engine('<%- view.engine %>', <%- view.render %>);
-<% } -%>
-app.set('views', path.join(__dirname, 'views'));
-app.set('view engine', '<%- view.engine %>');
 
-<% } -%>
-<% uses.forEach(function (use) { -%>
-app.use(<%- use %>);
-<% }); -%>
+if (require.main === module) {
+<%if(args.https){%>
+   // sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./selfsigned.key -out selfsigned.crt
+  const fs = require('fs');
+  const { join } = require('path');
+  const key = fs.readFileSync(join(__dirname, '.cert/selfsigned.key'), 'utf8');
+  const cert = fs.readFileSync(join(__dirname, '.cert/selfsigned.crt'), 'utf8');
+  const serv = require('https').createServer({ key, cert }, app);
+<%}else{%>
+  const serv = require('http').createServer(app);
+<%}%>
+  serv.listen(app.get('port'),
+      () => console.log(`listen http://localhost:${JSON.stringify(serv.address().port)}`)
+  );
+}
 
-<% mounts.forEach(function (mount) { -%>
-app.use(<%= mount.path %>, <%- mount.code %>);
-<% }); -%>
-
-<% if (view) { -%>
-// catch 404 and forward to error handler
-app.use(function(req, res, next) {
-  next(createError(404));
-});
-
-// error handler
-app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
-  res.locals.message = err.message;
-  res.locals.error = req.app.get('env') === 'development' ? err : {};
-
-  // render the error page
-  res.status(err.status || 500);
-  res.render('error');
-});
-
-<% } -%>
-module.exports = app;
+<%if(args.test){%>
+// npx jest --watch -c jest.config.js  --rootDir . -- app.js  
+// npm i -D jest supertest
+if (process.env.JEST_WORKER_ID !== undefined) {
+    const request = require('supertest')(app)
+    describe('test', () => {
+        it('GET / - saluts you', (done) => {
+            request
+                .get('/')
+                .expect(/Hi/, done);
+        });
+    });
+}
+<%}%>

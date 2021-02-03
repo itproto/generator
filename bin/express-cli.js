@@ -1,24 +1,20 @@
 #!/usr/bin/env node
 
-const ejs = require('ejs')
-const fs = require('fs')
 const path = require('path')
-const sortedObject = require('sorted-object')
-const util = require('util')
-const MODE_0755 = parseInt('0755', 8)
-
-const program = require('./prompt')
+const args = require('./prompt')
 const {
-  launchedFromCmd,
+  getFinalPrompt,
   exit,
   copyTemplate,
   write,
-
   copyTemplateMulti,
   confirm,
   mkdir,
   createAppName,
-  emptyDirectory
+  emptyDirectory,
+  getFuncBody,
+  loadTemplate,
+  prettyJson
 } = require('./utils')
 
 const { createPackage, addDependency } = require('./package-tmpl')
@@ -30,162 +26,75 @@ if (!exit.exited) {
   main()
 }
 
-const getFuncBody = method => method.toString().replace(/^\W*(function[^{]+\{([\s\S]*)\}|[^=]+=>[^{]*\{([\s\S]*)\}|[^=]+=>(.+))/i, '$2$3$4')
-
 function createApplication(name, dir) {
-  // Package
-  const pkg = createPackage(name)
-
-  // JavaScript
-  const app = loadTemplate('js/app.js')
-  const addUse = (cb) => {
-    let body = cb.toString()
-    body = body.slice(body.indexOf('=>') + 2)
-    app.locals.uses.push(body)
+  const use = (cb) => {
+    app.locals.uses.push(getFuncBody(cb).trim())
+  }
+  const addImport = (pname, alias = undefined, version = undefined) => {
+    const finalName = alias || pname
+    addDependency(pkg, pname)
+    app.locals.modules[finalName] = pname
+  }
+  const initApp = (app) => {
+    const locals = app.locals
+    Object.assign(locals, {
+      localModules: Object.create(null),
+      modules: Object.create(null),
+      mounts: [],
+      uses: [],
+      args
+    })
   }
 
-  // App modules
-  app.locals.localModules = Object.create(null)
-  app.locals.modules = Object.create(null)
-  app.locals.mounts = []
-  app.locals.uses = []
+  const pkg = createPackage(name)
+  const app = loadTemplate('js/app.js')
+  initApp(app)
 
   // Request logger
-  app.locals.modules.logger = 'morgan'
-  addUse((logger) => logger('dev'))
-  addDependency(pkg, 'morgan', '~1.9.1')
+  addImport('morgan', 'logger')
+  use((logger) => logger('dev'))
 
-  // Body parsers
-  app.locals.uses.push('express.json()')
-  app.locals.uses.push('express.urlencoded({ extended: false })')
-
-  // Cookie parser
-  app.locals.modules.cookieParser = 'cookie-parser'
-  app.locals.uses.push('cookieParser()')
-  addDependency(pkg, 'cookie-parser', '~1.4.4')
+  // Parsers
+  use((express) => express.json())
+  use((express) => express.urlencoded({ extended: false }))
+  addImport('cookie-parser', 'cookieParser')
+  use((cookieParser) => cookieParser())
+  use((express) => express.static(path.join(__dirname, 'public')))
 
   if (dir !== '.') {
     mkdir(dir, '.')
   }
 
-  ['public', 'routes'].forEach(p => mkdir(dir, p))
-  copyTemplateMulti('js/routes', dir + '/routes', '*.js')
-
-  if (program.view) {
-    // Copy view templates
+  if (args.view) {
     mkdir(dir, 'views')
-    pkg.dependencies['http-errors'] = '~1.6.3'
-    switch (program.view) {
-      case 'ejs':
-        copyTemplateMulti('views', dir + '/views', '*.ejs')
-        break
-    }
-  } else {
-    // Copy extra public files
-    copyTemplate('js/index.html', path.join(dir, 'public/index.html'))
+    copyTemplateMulti('views', `${dir}/views`, '*.ejs')
+    app.locals.view = { engine: 'ejs' }
+    addDependency(pkg, 'ejs')
   }
 
-  // Index router mount
-  app.locals.localModules.indexRouter = './routes/index'
-  app.locals.mounts.push({ path: '/', code: 'indexRouter' })
-
-  // User router mount
-  app.locals.localModules.usersRouter = './routes/users'
-  app.locals.mounts.push({ path: '/users', code: 'usersRouter' })
-
-  // Template support
-  switch (program.view) {
-    case 'ejs':
-      app.locals.view = { engine: 'ejs' }
-      addDependency(pkg, 'ejs', '~2.6.1')
-      break
-    default:
-      app.locals.view = false
-      break
-  }
-
-  // Static files
-  app.locals.uses.push("express.static(path.join(__dirname, 'public'))")
-
-  if (program.git) {
-    copyTemplate('js/gitignore', path.join(dir, '.gitignore'))
-  }
-
-  // sort dependencies like npm(1)
-  pkg.dependencies = sortedObject(pkg.dependencies)
-
-  // write files
   write(path.join(dir, 'app.js'), app.render())
-  write(path.join(dir, 'package.json'), JSON.stringify(pkg, null, 2) + '\n')
+  write(path.join(dir, 'package.json'), prettyJson(pkg))
+  // copy assets
+  copyTemplate('js/gitignore', path.join(dir, '.gitignore'))
+  copyTemplate('js/jest.config.js', path.join(dir, 'jest.config.js'))
 
-  const prompt = launchedFromCmd() ? '>' : '$'
-
-  if (dir !== '.') {
-    console.log()
-    console.log('   change directory:')
-    console.log('     %s cd %s', prompt, dir)
-  }
-
-  console.log()
-  console.log('   install dependencies:')
-  console.log('     %s npm install', prompt)
-  console.log()
-  console.log('   run the app:')
-
-  if (launchedFromCmd()) {
-    console.log('     %s SET DEBUG=%s:* & npm start', prompt, name)
-  } else {
-    console.log('     %s DEBUG=%s:* npm start', prompt, name)
-  }
-
-  console.log()
+  console.log(getFinalPrompt(dir))
 }
-
-/**
- * Load template file.
- */
-
-function loadTemplate(name) {
-  const contents = fs.readFileSync(path.join(__dirname, '..', 'templates', (name + '.ejs')), 'utf-8')
-  const locals = Object.create(null)
-
-  function render() {
-    return ejs.render(contents, locals, {
-      escape: util.inspect
-    })
-  }
-
-  return {
-    locals,
-    render
-  }
-}
-
-/**
- * Main program.
- */
 
 function main() {
-  // Path
-  const destinationPath = program.args.shift() || '.'
-
-  // App name
+  const destinationPath = args.args.shift() || '.'
   const appName = createAppName(path.resolve(destinationPath)) || 'hello-world'
+  args.view = args.view === true ? 'ejs' : undefined
 
-  // View engine
-  if (program.view === true) {
-    program.view = 'ejs'
-  }
-
-  // Generate application
-  emptyDirectory(destinationPath, function (empty) {
-    if (empty || program.force) {
-      createApplication(appName, destinationPath)
+  emptyDirectory(destinationPath, (empty) => {
+    const newApp = () => createApplication(appName, destinationPath)
+    if (empty || args.force) {
+      newApp()
     } else {
-      confirm('???OVERWRITE???? [y/N] ', function (ok) {
+      confirm('???OVERWRITE???? [y/N] ', (ok) => {
         if (ok) {
           process.stdin.destroy()
-          createApplication(appName, destinationPath)
+          newApp()
         } else {
           console.error('aborting')
           exit(1)

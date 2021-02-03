@@ -3,7 +3,8 @@ const createPackage = (name) => ({
   version: '0.0.0',
   private: true,
   scripts: {
-    start: 'PORT 7777 nodemon app.js',
+    start: 'SET PORT=7777 && nodemon app.js',
+    'start:nix': 'SET PORT=7777 && nodemon app.js',
     debug: 'node --inspect --debug-brk app.js'
 
   },
@@ -16,8 +17,15 @@ const createPackage = (name) => ({
   }
 })
 
-const addDependency = (pkg, name, version) => {
-  pkg.dependencies[name] = version
+const additionalDepds = {
+  'morgan': '~1.9.1',
+  'cookie-parser': '~1.4.4',
+  'ejs': '~2.6.1'
+}
+
+const addDependency = (pkg, name, version = undefined) => {
+  const pkgVersion = version || additionalDepds[name] || '*'
+  pkg.dependencies[name] = pkgVersion
   return pkg
 }
 

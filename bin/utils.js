@@ -10,6 +10,23 @@ var MODE_0666 = parseInt('0666', 8)
 var MODE_0755 = parseInt('0755', 8)
 var TEMPLATE_DIR = path.join(__dirname, '..', 'templates')
 
+function getFuncBody(f) {
+  const matches = f.toString().match(/^(?:\s*\(?(?:\s*\w*\s*,?\s*)*\)?\s*?=>\s*){?([\s\S]*)}?$/)
+  if (!matches) {
+    return undefined
+  }
+
+  const firstPass = matches[1]
+
+  // Needed because the RegExp doesn't handle the last '}'.
+  const secondPass =
+    (firstPass.match(/{/g) || []).length === (firstPass.match(/}/g) || []).length - 1
+      ? firstPass.slice(0, firstPass.lastIndexOf('}'))
+      : firstPass
+
+  return secondPass
+}
+
 /**
  * Create an app name from a directory path, fitting npm naming requirements.
  *
@@ -187,8 +204,49 @@ function copyTemplateMulti(fromDir, toDir, nameGlob) {
     .filter(minimatch.filter(nameGlob, { matchBase: true }))
     .forEach(function (name) {
       copyTemplate(path.join(fromDir, name), path.join(toDir, name))
+      console.log('AAAAA', path.join(toDir, name) + '=>' + name)
     })
 }
+
+const getFinalPrompt = (dir) => {
+  const term = launchedFromCmd() ? '>' : '$'
+  const cdPrompt = `
+change directory:
+  ${term} cd ${dir}
+`
+  return `
+${dir !== '.' ? cdPrompt : ''}
+install dependencies:
+  ${term} npm install
+
+run the app:
+  ${term} DEBUG=${dir}:* npm start
+`
+}
+
+/**
+ * Load template file.
+ */
+
+const ejs = require('ejs')
+
+function loadTemplate(name) {
+  const contents = fs.readFileSync(path.join(__dirname, '..', 'templates', (name + '.ejs')), 'utf-8')
+  const locals = Object.create(null)
+
+  function render() {
+    return ejs.render(contents, locals, {
+      escape: util.inspect
+    })
+  }
+
+  return {
+    locals,
+    render
+  }
+}
+
+const prettyJson = (src) => JSON.stringify(src, null, 2)
 
 module.exports = {
   launchedFromCmd,
@@ -203,6 +261,10 @@ module.exports = {
   mkdir,
   createAppName,
   renamedOption,
-  emptyDirectory
+  emptyDirectory,
+  getFuncBody,
+  getFinalPrompt,
+  loadTemplate,
+  prettyJson
 
 }
