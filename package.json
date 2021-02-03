@@ -41,6 +41,6 @@
     "lint": "eslint .",
     "test": "mocha --reporter spec --bail --check-leaks test/",
     "test-ci": "mocha --reporter spec --check-leaks test/",
-    "publish": "npm publish"
+    "pub": "npm publish"
   }
 }
