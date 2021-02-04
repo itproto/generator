@@ -8,15 +8,15 @@ const app = express()
   .get('/headers', (req, res) => JSON.stringify(res.getHeaders(), null, 2));
 
 
-<%- include(`js/middle/middle.js`)%>
+<%- include(`js/middle/middle.js.ejs`)%>
 
 
 <%if(args.cors){%>
-
+<%- include(`js/middle/cors.js.ejs`)%>
 <%}%>
 
 <%if (args.logs) {%>
-<%- include(`js/errors/logs.js`)%>
+<%- include(`js/errors/logs.js.ejs`)%>
 <%}%>
 
 <%if (!args.noErrors) {%>
