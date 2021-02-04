@@ -1,0 +1,75 @@
+const { check, oneOf, body, validationResult, query } = require('express-validator')
+
+const express = require('express')
+
+const app = module.exports = express()
+  .set('port', process.env.PORT || 5555)
+  .use(express.json())
+  // curl -H "Content-Type: application/json"   -d '{"username":"xyz@gmail.com","password":12345, "isRepublican":false, "bio":"something"}'   http://localhost:5555/user
+  .post('/user',
+    body('username')
+      .isEmail()
+      .normalizeEmail()
+      .withMessage('must be email'),
+    body('password')
+      .isLength({ min: 5 })
+      .matches(/\d/)
+      .withMessage('must contain number'),
+
+    body('isRepublican').optional().toBoolean(),
+    body('bio').not().isEmpty().trim().escape(),
+    query('status').optional().isIn(['enabled', 'disabled']),
+    (req, res) => {
+      const errors = validationResult(req)
+      if (!errors.isEmpty()) {
+        return res
+          .status(400)
+          .json({ errors: errors.array() })
+      }
+      res.end({ status: 'OK', body: req.body })
+    })
+  .post('/start-freelancing', oneOf([
+    check('programming_language').isIn(['javascript', 'java', 'php']),
+    check('design_tools').isIn(['canva', 'photoshop', 'gimp'])
+  ]), (req, res, next) => {
+    try {
+      validationResult(req).throw()
+      res.json({ message: 'You are hired' })
+    } catch (err) {
+      res.status(400).json('Not good for job')
+    }
+  })
+  .get('/params-pollution', require('hpp')(), (req, res) => {
+    res.send(req.query.foo && req.query.foo.toUpperCase() || 'not set')
+  })
+
+app.listen(app.get('port'), () => console.info(`Server listen at ${app.get('port')}`))
+
+// TEST
+if (process.env.JEST_WORKER_ID !== undefined) {
+  const request = require('supertest')(app)
+  describe('test', () => {
+    it('POST /user', (done) => {
+      request
+        .post('/user')
+        .set('content-type', 'application/json')
+        .send({
+          username: 'hello@gmail.com',
+          password: '123456',
+          bio: 'Short Bio'
+        })
+        .expect(/OK/, done)
+    })
+
+    it('POST /user', (done) => {
+      request
+        .post('/start-freelancing')
+        .set('content-type', 'application/json')
+        .send({
+          programming_language: 'java',
+          design_tools: 'gimp'
+        })
+        .expect({ 'message': 'You are hired' }, done)
+    })
+  })
+}

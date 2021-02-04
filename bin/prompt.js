@@ -35,7 +35,7 @@ program
   .option('--https', 'add https support')
   .option('--test', 'add SuperTest')
   .option('-f, --force', 'force on non-empty directory')
-  .option('-a, --add <generator>', '--add=rest|proxy')
+  .option('-a, --add <generator>', '--add=rest|proxy|cookie|validate')
   .option('--noErrors', '', false)
   .option('--log', 'winston/debug logs', false)
   .option('--cors', 'cors for add=json generator', false)

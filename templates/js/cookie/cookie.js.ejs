@@ -1,0 +1,46 @@
+
+const COOKIE_NAME = 'remember'
+
+const defaultSettings = {
+  maxAge: 60 * 1000,
+  signed: true,
+  secure: false, // 3rdparty only over https
+  httpOnly: true, // NO JS access
+  sameSite: 'lax' // DEFAULT, otherwise sameSite:None but Secure!
+}
+
+module.exports = require('express').Router()
+  .use(require('cookie-parser')('SECRET_TO_SIGN_COOKIES'))
+  .get('/', (req, res) => {
+    const cookies = defaultSettings.signed ? req.signedCookies : req.cookies
+    if (cookies[COOKIE_NAME]) {
+      res.send(`
+            Logged, <a href='cookie/logout'>Forget cookie</a>
+        `)
+    } else {
+      res.send(`
+            <form method="post">
+              <label><input name="${COOKIE_NAME}" type="checkbox" /> Set cookie ${COOKIE_NAME} </label>
+              <input type="submit" value="submit">
+            </form>
+        `)
+    }
+  })
+  .post('/', require('express').urlencoded(), (req, res) => {
+    if (req.body[COOKIE_NAME]) {
+      res.cookie(COOKIE_NAME, 1, defaultSettings)
+    }
+    res.redirect('back')
+  })
+  .get('/logout', (req, res) => {
+    res.clearCookie(COOKIE_NAME)
+    res.redirect('back')
+  })
+  .get('/echo', (req, res) => {
+    const { cookies, signedCookies } = req
+    return res.json({
+      cookies,
+      signedCookies,
+      defaultSettings
+    })
+  })

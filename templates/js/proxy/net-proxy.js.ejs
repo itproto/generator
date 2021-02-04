@@ -1,0 +1,16 @@
+const { createConnection, createServer } = require('net')
+const { pipeline } = require('stream')
+createServer((client) => {
+  const { port: remPort, address: remHost } = { port: 8888, address: 'localhost' } // remoteServer.address()
+  const remote = createConnection(remPort, remHost, () => {
+    pipeline(
+      client,
+      remote,
+      client,
+      (err, cb) => {
+        if (err) throw err
+        console.log('Finish')
+      }
+    )
+  })
+}).listen(2222)

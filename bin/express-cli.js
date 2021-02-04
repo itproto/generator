@@ -26,10 +26,16 @@ if (!exit.exited) {
   main()
 }
 
+const dir = getWorkingDir()
+const renderFeature = (name) => {
+  const feat = loadTemplate(`js/${name}/${name}.js`)
+  feat.locals.args = args
+  write(path.join(dir, `${name}.js`), feat.render())
+}
+
 if (args.add) {
   switch (args.add) {
     case 'rest':
-      const dir = getWorkingDir()
       const name = 'users'
       const controller = loadTemplate('js/mvc/controller.js')
       const model = loadTemplate('js/mvc/model.js')
@@ -39,8 +45,9 @@ if (args.add) {
       write(path.join(dir, `${name}-model.js`), model.render())
       break
     case 'proxy':
-      const proxy = loadTemplate('js/proxy/proxy.js')
-      write(path.join(getWorkingDir(), `proxy.js`), proxy.render())
+    case 'cookie':
+    case 'validate':
+      renderFeature(args.add)
       break
     default:
       console.error('Unknown generator', args.add)

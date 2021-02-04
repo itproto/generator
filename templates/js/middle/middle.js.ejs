@@ -1,7 +1,8 @@
 // middle
+const express = require('express')
 app.use(require('morgan')('dev'))
   .use(express.json())
   .set('json spaces', 2)
   .use(express.urlencoded({ extended: false }))
-  .use(require('cookieParser')({ secret: 'SECRET' })) //  curl http://127.0.0.1:8080 --cookie "Cho=Kim;Greet=Hello"
-  .use(express.static(path.join(__dirname, 'public')))
+  .use(require('cookie-parser')({ secret: 'SECRET' })) //  curl http://127.0.0.1:8080 --cookie "Cho=Kim;Greet=Hello"
+  .use(express.static(require('path').join(__dirname, 'public')))
