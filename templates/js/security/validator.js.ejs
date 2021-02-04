@@ -1,10 +1,6 @@
 const { check, oneOf, body, validationResult, query } = require('express-validator')
-
-const express = require('express')
-
-const app = module.exports = express()
-  .set('port', process.env.PORT || 5555)
-  .use(express.json())
+module.exports = require('express').Router()
+  .use(require('express').json())
   // curl -H "Content-Type: application/json"   -d '{"username":"xyz@gmail.com","password":12345, "isRepublican":false, "bio":"something"}'   http://localhost:5555/user
   .post('/user',
     body('username')
@@ -42,8 +38,6 @@ const app = module.exports = express()
   .get('/params-pollution', require('hpp')(), (req, res) => {
     res.send(req.query.foo && req.query.foo.toUpperCase() || 'not set')
   })
-
-app.listen(app.get('port'), () => console.info(`Server listen at ${app.get('port')}`))
 
 // TEST
 if (process.env.JEST_WORKER_ID !== undefined) {

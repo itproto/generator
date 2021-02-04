@@ -1,15 +1,18 @@
 
-
-const express =  require('express');
+const express = require('express')
 const app = express()
+  .set('json spaces', 2)
+  .use(express.json())
   .set('port', process.env.PORT || 5555)
-  .get('/', (req, res) => (res.end('Sample')))
+  .get('/', (req, res) => (res.type('html').status(200).end(`<h1>Check it</h1>`)))
   .get('/json', (req, res) => res.json({ ok: 'ok' }))
-  .get('/headers', (req, res) => JSON.stringify(res.getHeaders(), null, 2));
+  .all('/echo/:foo?/:bar?', (req, res) => {
+    const { method, ip, params, headers, query, body, signedCookies, cookies, session } = req
+    res.json({ method, ip, params, headers, query, body, signedCookies, cookies, session })
+  })
 
 
 <%- include(`js/middle/middle.js.ejs`)%>
-
 
 <%if(args.cors){%>
 <%- include(`js/middle/cors.js.ejs`)%>
