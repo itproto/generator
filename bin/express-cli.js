@@ -30,8 +30,9 @@ if (args.add === 'json') {
   const dir = getWorkingDir()
   const name = 'users'
   const controller = loadTemplate('js/mvc/controller.js')
-  const model = loadTemplate('js/mvc/controller.js')
+  const model = loadTemplate('js/mvc/model.js')
   controller.locals.name = name
+  model.locals.name = name
   write(path.join(dir, `${name}-route.js`), controller.render())
   write(path.join(dir, `${name}-model.js`), model.render())
   process.exit(0)
