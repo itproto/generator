@@ -14,7 +14,9 @@ const createPackage = (name, port = '8080', mainFile = 'app.js') => ({
   dependencies: {
     'debug': '~2.6.9',
     'express': '~4.16.1',
-    'cookie-parser': '^1.4.5'
+    'cookie-parser': '^1.4.5',
+    'express-alidator': '^6.9.2'
+
   },
   devDependencies: {
     'nodemon': '^2.0.7'

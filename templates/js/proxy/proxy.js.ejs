@@ -1,0 +1,25 @@
+const requestProxy = require('express-request-proxy')
+const router = require('express').Router()
+  .get('/', function (req, res, next) {
+    const { url } = req.query
+    if (!url) {
+      return res.status(400).send('Send url query')
+    }
+    const proxy = requestProxy({
+      url,
+      query: {
+        access_token: req.user.accessToken,
+        secret_key: process.env.SOMEAPI_SECRET_KEY
+      },
+      headers: {
+        Authorization: 'Basic ' + Buffer.from('usernamePassword').toString('base64'),
+        'X-Custom-Header': process.env.SOMEAPI_CUSTOM_HEADER
+      }
+      // cache: redis.createClient(),
+      // cacheMaxAge: 60 // 1min,
+      // transforms: [markdownTransform({ highlight: true })]
+    })
+    proxy(req, res, next)
+  })
+
+module.exports = router

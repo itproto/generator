@@ -37,6 +37,11 @@ if (args.add === 'json') {
   write(path.join(dir, `${name}-model.js`), model.render())
   process.exit(0)
 }
+if (args.add === 'proxy') {
+  const proxy = loadTemplate('js/proxy/proxy.js')
+  write(path.join(getWorkingDir(), `proxy.js`), proxy.render())
+  process.exit(0)
+}
 
 function createApplication(name, dir) {
   const use = (cb) => {
