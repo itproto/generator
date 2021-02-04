@@ -1,7 +1,7 @@
 {
   "name": "expreso",
   "description": "Espresor",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "repository": "itproto/generator",
   "license": "MIT",
   "dependencies": {
