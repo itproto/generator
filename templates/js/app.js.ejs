@@ -10,6 +10,11 @@ const app = express()
 
 <%- include(`js/middle/middle.js`)%>
 
+
+<%if(args.cors){%>
+
+<%}%>
+
 <%if (args.logs) {%>
 <%- include(`js/errors/logs.js`)%>
 <%}%>

@@ -38,7 +38,7 @@ program
   .option('-a, --add <generator>', '--add=rest|proxy')
   .option('--noErrors', '', false)
   .option('--log', 'winston/debug logs', false)
-  .option('--cors', 'cors for add=json generator', true)
+  .option('--cors', 'cors for add=json generator', false)
   .parse(process.argv)
 
 module.exports = program
