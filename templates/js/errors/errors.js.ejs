@@ -1,0 +1,21 @@
+const createError = require('http-errors')
+app
+  .get('/rejected', (req, res, next) => {
+    require('fs').readdir('not-exist', (err, files) => {
+      if (err.code === 'ENOENT') {
+        return next(createError(404, err, { expose: false }))
+      }
+      if (err) return next(err)
+    })
+    require('util').promisify(require('fs').readdir)('not-exist').then().catch(next)
+  })
+  .get('/forbidden', (req, res, next) => {
+    return next(createError(403, `${req.ip} tried to access /Forbidden`))
+  })
+  .use((req, res, next) => {
+    return next(createError(404))
+  })
+  .use((err, req, res, next) => {
+    console.error(err.stack)
+    res.sendStatus(err.status || 500)
+  })

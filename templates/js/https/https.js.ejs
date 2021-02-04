@@ -1,0 +1,6 @@
+// sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./selfsigned.key -out selfsigned.crt
+const fs = require('fs')
+const { join } = require('path')
+const key = fs.readFileSync(join(__dirname, '.cert/selfsigned.key'), 'utf8')
+const cert = fs.readFileSync(join(__dirname, '.cert/selfsigned.crt'), 'utf8')
+const serv = require('https').createServer({ key, cert }, app)

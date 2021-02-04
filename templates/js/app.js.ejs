@@ -8,60 +8,19 @@ const app = express()
   .get('/headers', (req, res) => JSON.stringify(res.getHeaders(), null, 2));
 
 
-//middle
-app.use(require('morgan')('dev'))
-.use(express.json())
-.set('json spaces', 2)
-.use(express.urlencoded({ extended: false }))
-.use(require('cookieParser')({secret: 'SECRET'})) //  curl http://127.0.0.1:8080 --cookie "Cho=Kim;Greet=Hello"
-.use(express.static(path.join(__dirname, 'public')));
+<%- include(`js/middle/middle.js`)%>
 
-
-<%if (args.withLog) {%>
-const winston = require('winston');
-const log = require('util').debuglog('jnad');
-const logger = winston.createLogger({
-    level: 'info',
-    transports: [
-        new winston.transports.File({ filename: join(__dirname, 'log.err'), level: 'eror' }),
-        new winston.transports.Console({ level: 'info' })
-    ]
-})
+<%if (args.logs) {%>
+<%- include(`js/errors/logs.js`)%>
 <%}%>
 
 <%if (!args.noErrors) {%>
-//errors
-const createError = require('http-errors');
-app
-  .get('/rejected', (req, res, next) => {
-    require('fs').readdir('not-exist', (err, files) => {
-      if (err.code === 'ENOENT') {
-        return next(createError(404, err, { expose: false }))
-      }
-      if (err) return next(err);
-    });
-    require('util').promisify(require('fs').readdir)('not-exist').then().catch(next)
-  })
-  .get('/forbidden', (req, res, next) => {
-    return next(createError(403, `${req.ip} tried to access /Forbidden`));
-  })
-  .use((req, res, next) => {
-    return next(createError(404));
-  })
-  .use((err, req, res, next) => {
-    console.error(err.stack)
-    res.sendStatus(err.status || 500)
-  });
+<%- include(`js/errors/errors.js.ejs`)%>
 <%}%>
 
 
 <%if (args.https) {%>
- // sudo openssl req -x509 -nodes -days 365 -newkey rsa:2048 -keyout ./selfsigned.key -out selfsigned.crt
-const fs = require('fs');
-const { join } = require('path');
-const key = fs.readFileSync(join(__dirname, '.cert/selfsigned.key'), 'utf8');
-const cert = fs.readFileSync(join(__dirname, '.cert/selfsigned.crt'), 'utf8');
-const serv = require('https').createServer({ key, cert }, app);
+ <%- include(`js/https/https.js.ejs`)%>
 <%} else {%>
 const serv = require('http').createServer(app);
 <%}%>
@@ -70,18 +29,7 @@ serv.listen(app.get('port'),
 );
 
 <%if (args.test) {%>
-// npx jest --watch -c jest.config.js  --rootDir . -- app.js  
-// npm i -D jest supertest
-if (process.env.JEST_WORKER_ID !== undefined) {
-    const request = require('supertest')(app)
-    describe('test', () => {
-      it('GET / - saluts you', (done) => {
-        request
-          .get('/')
-          .expect(/Hi/, done);
-      });
-    });
-  }
+ <%- include(`js/test/test.js.ejs`)%>
 <%}%>
 
 module.exports = app;

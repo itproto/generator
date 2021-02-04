@@ -2,7 +2,10 @@ const users = require('./<%=name%>-model')
 const { query, param, validationResult, checkSchema, check } = require('express-validator')
 
 const controller = {
-  gets: [query('from').optional(true).isNumeric(),
+  gets: [
+    query('from')
+    .optional(true)
+    .isNumeric(),
     (req, res) => {
       const errors = validationResult(req)
       if (!errors.isEmpty()) {
@@ -12,8 +15,10 @@ const controller = {
       res.json(users.list(from, to))
     }
   ],
-  got: [param('id').isAlphanumeric().withMessage('Alphanumeric')
-    .trim().isLength({ max: 11, min: 11 }).withMessage('Must be 10'), (req, res) => {
+  got: [
+    param('id').isAlphanumeric().withMessage('Alphanumeric')
+    .trim().escape() //toBoolean() sanitize
+    .isLength({ max: 12, min: 12 }).withMessage('Must be 12'), (req, res) => {
     const errors = validationResult(req)
     if (!errors.isEmpty()) {
       return res.status(400).send(errors)
@@ -57,9 +62,45 @@ const controller = {
   ]
 }
 
+<%if(args.cors){%>
+const whitelist = ['*', 'http://itpr.com']
+const complexCors = {
+  origin: (origin, cb) => {
+    Promise.resolve(whitelist).then(origins => cb(null, origins))
+  },
+  methods: ['POST'],
+  credentials: true,
+  maxAge: 3600
+}
+const defaultCors = {
+  'origin': '*',
+  'methods': 'GET,HEAD,PUT,PATCH,POST,DELETE',
+  'preflightContinue': false,
+  'optionsSuccessStatus': 204
+}
+<%}%>
+
 module.exports = require('express').Router()
+// TODO: Sort paging users?sort=-age,+salary&page=1&totalPages=10
   .get('/', controller.gets)
   .post('/', controller.post)
   .get('/:id', controller.got)
   .put('/:id', controller.put)
   .delete('/:id', controller.del)
+<%if(args.cors){%>
+  .get('/simple-corse', require('cors')(), (req, res) => res.send(defaultCors))
+  .get('/complex-corse', require('cors')(complexCors), controller.gets)
+  .get('/cached', require('apicache')('5 minutes'), controller.gets)
+  .use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    // authorized headers for preflight requests
+    // https://developer.mozilla.org/en-US/docs/Glossary/preflight_request
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+    next();
+    app.options('*', (req, res) => {
+        // allowed XHR methods
+        res.header('Access-Control-Allow-Methods', 'GET, PATCH, PUT, POST, DELETE, OPTIONS');
+        res.send();
+    });
+});
+<%}%>

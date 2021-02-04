@@ -19,27 +19,32 @@ const {
 
 const { createPackage, addDependency } = require('./package-tmpl')
 const getWorkingDir = () => path.resolve(args.args.shift() || '.')
+
 // Re-assign process.exit because of commander
 process.exit = exit
-
 if (!exit.exited) {
   main()
 }
 
-if (args.add === 'json') {
-  const dir = getWorkingDir()
-  const name = 'users'
-  const controller = loadTemplate('js/mvc/controller.js')
-  const model = loadTemplate('js/mvc/model.js')
-  controller.locals.name = name
-  model.locals.name = name
-  write(path.join(dir, `${name}-route.js`), controller.render())
-  write(path.join(dir, `${name}-model.js`), model.render())
-  process.exit(0)
-}
-if (args.add === 'proxy') {
-  const proxy = loadTemplate('js/proxy/proxy.js')
-  write(path.join(getWorkingDir(), `proxy.js`), proxy.render())
+if (args.add) {
+  switch (args.add) {
+    case 'rest':
+      const dir = getWorkingDir()
+      const name = 'users'
+      const controller = loadTemplate('js/mvc/controller.js')
+      const model = loadTemplate('js/mvc/model.js')
+      controller.locals.name = name
+      model.locals.name = name
+      write(path.join(dir, `${name}-route.js`), controller.render())
+      write(path.join(dir, `${name}-model.js`), model.render())
+      break
+    case 'proxy':
+      const proxy = loadTemplate('js/proxy/proxy.js')
+      write(path.join(getWorkingDir(), `proxy.js`), proxy.render())
+      break
+    default:
+      console.error('Unknown generator', args.add)
+  }
   process.exit(0)
 }
 
@@ -94,7 +99,6 @@ function createApplication(name, dir) {
   // copy assets
   copyTemplate('js/gitignore', path.join(dir, '.gitignore'))
   copyTemplate('js/jest.config.js', path.join(dir, 'jest.config.js'))
-
   console.log(getFinalPrompt(dir))
 }
 

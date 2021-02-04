@@ -1,0 +1,12 @@
+// npx jest --watch -c jest.config.js  --rootDir . -- app.js
+// npm i -D jest supertest
+if (process.env.JEST_WORKER_ID !== undefined) {
+  const request = require('supertest')(app)
+  describe('test', () => {
+    it('GET / - saluts you', (done) => {
+      request
+        .get('/')
+        .expect(/Hi/, done)
+    })
+  })
+}

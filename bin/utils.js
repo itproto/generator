@@ -204,7 +204,6 @@ function copyTemplateMulti(fromDir, toDir, nameGlob) {
     .filter(minimatch.filter(nameGlob, { matchBase: true }))
     .forEach(function (name) {
       copyTemplate(path.join(fromDir, name), path.join(toDir, name))
-      console.log('AAAAA', path.join(toDir, name) + '=>' + name)
     })
 }
 
@@ -231,12 +230,16 @@ run the app:
 const ejs = require('ejs')
 
 function loadTemplate(name) {
-  const contents = fs.readFileSync(path.join(__dirname, '..', 'templates', (name + '.ejs')), 'utf-8')
+  const templatesDir = path.join(__dirname, '..', 'templates')
+  const contents = fs.readFileSync(path.join(templatesDir, (name + '.ejs')), 'utf-8')
   const locals = Object.create(null)
 
   function render() {
     return ejs.render(contents, locals, {
-      escape: util.inspect
+      escape: util.inspect,
+      views: [
+        templatesDir
+      ]
     })
   }
 
