@@ -5,7 +5,8 @@ const createUser = (idx) => new Promise((resolve) => {
   resolve({
     name,
     id: uuid(),
-    age: 10 + Math.floor(Math.random()) * 100 - 10
+    age: 10 + Math.floor(Math.random() * 100) - 10,
+    pass: uuid()
   })
 })
 

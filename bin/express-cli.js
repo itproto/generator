@@ -36,8 +36,10 @@ const renderFeature = (name, srcDir = undefined, finalName = undefined) => {
 
 if (args.add) {
   switch (args.add) {
+    case 'pass':
+      renderFeature('pass', 'auth')
+      break
     case 'rest':
-      console.log(args)
       const name = args.name || 'entity'
       renderFeature('ctrl', 'rest', `${name}-ctrl`)
       renderFeature('model', 'rest', `${name}-model`)
