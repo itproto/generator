@@ -34,6 +34,7 @@ program
   .option('-v, --view <engine>', 'add ejs', false)
   .option('--https', 'add https support')
   .option('--test', 'add SuperTest')
+  .option('--name <name>', 'some name')
   .option('-f, --force', 'force on non-empty directory')
   .option('-a, --add <generator>', '--add=rest|proxy|cookie|validate')
   .option('--noErrors', '', false)

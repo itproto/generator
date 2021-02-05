@@ -27,22 +27,20 @@ if (!exit.exited) {
 }
 
 const dir = getWorkingDir()
-const renderFeature = (name) => {
-  const feat = loadTemplate(`js/${name}/${name}.js`)
+const renderFeature = (name, srcDir = undefined, finalName = undefined) => {
+  const parentName = srcDir || name
+  const feat = loadTemplate(`js/${parentName}/${name}.js`)
   feat.locals.args = args
-  write(path.join(dir, `${name}.js`), feat.render())
+  write(path.join(dir, `${finalName || name}.js`), feat.render())
 }
 
 if (args.add) {
   switch (args.add) {
     case 'rest':
-      const name = 'users'
-      const controller = loadTemplate('js/mvc/controller.js')
-      const model = loadTemplate('js/mvc/model.js')
-      controller.locals.name = name
-      model.locals.name = name
-      write(path.join(dir, `${name}-route.js`), controller.render())
-      write(path.join(dir, `${name}-model.js`), model.render())
+      console.log(args)
+      const name = args.name || 'entity'
+      renderFeature('ctrl', 'rest', `${name}-ctrl`)
+      renderFeature('model', 'rest', `${name}-model`)
       break
     case 'proxy':
     case 'cookie':
